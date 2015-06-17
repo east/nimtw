@@ -23,6 +23,7 @@ proc mainLoop(srv: Socket) =
   var buf = newStringOfCap(BufSize)
   var packet = PacketConstruct()
   var clients : ClientSeq = @[]
+  var chunkList = newChunkList()
 
   #
   networkInit()
