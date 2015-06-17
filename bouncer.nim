@@ -1,4 +1,4 @@
-import os, net, rawsockets, selectors, network
+import os, net, rawsockets, selectors, network, basetypes
 
 const
   BufSize = 2048
@@ -12,18 +12,29 @@ type
 
   ClientSeq = seq[Client]
 
+let
+  anyClient = Client(socket: nil, address: "0.0.0.0", port: Port(0), sel: nil)
+
 proc getClient(clients: ClientSeq, address: string, port: Port): Client =
   result = nil
 
   for c in clients:
     if c.address == address and c.port == port:
       return c
-  
+
+var chunkList = newChunkList()
+
+proc handlePacket(packet: PacketConstruct, cl: Client) =
+  var res = chunkList.fetchChunks(packet, (address: cl.address, port: cl.port), -1)
+
+  for i in 0 .. chunkList.numChunks:
+    var c = chunkList.chunks[i]
+    echo("chunk: ", repr c)
+
 proc mainLoop(srv: Socket) =
   var buf = newStringOfCap(BufSize)
   var packet = PacketConstruct()
   var clients: ClientSeq = @[]
-  var chunkList = newChunkList()
 
   #
   networkInit()
@@ -31,10 +42,10 @@ proc mainLoop(srv: Socket) =
   var
     fromAddr = ""
     fromPort: Port
-    #twAddr = "95.172.92.151"
-    twAddr = "127.0.0.1"
-    #twPort = Port(8339)
-    twPort = Port(8303)
+    twAddr = "95.172.92.151"
+    #twAddr = "127.0.0.1"
+    twPort = Port(8314)
+    #twPort = Port(8303)
 
   var sel = newSelector()
   var srvKey = sel.register(srv.getFD, {EvRead}, nil)
@@ -51,7 +62,7 @@ proc mainLoop(srv: Socket) =
         var cl: Client
         # packet on server socket
         var res = srv.recvFrom(buf, BufSize, fromAddr, fromPort)
-        echo("[srv] received ", res, " bytes")
+        #echo("[srv] received ", res, " bytes")
        
         cl = clients.getClient(fromAddr, fromPort)
         if cl == nil:
@@ -67,7 +78,10 @@ proc mainLoop(srv: Socket) =
           clients.add(cl)
 
         var pRes = packet.unpackPacket(buf)
-        echo("unpacker res: ", pRes)
+        if pRes == ueSuccess:
+          handlePacket(packet, cl)
+        else:
+          echo("unpacker res: ", pRes)
 
         # forward packet to server
         discard cl.socket.sendTo(twAddr, twPort, buf)
@@ -78,11 +92,14 @@ proc mainLoop(srv: Socket) =
           if curE.key == c.sel:
             # receive packet from server
             var res = c.socket.recvFrom(buf, BufSize, fromAddr, fromPort)
-            echo("[tw] received ", res, " bytes")
+            #echo("[tw] received ", res, " bytes")
 
 
             var pRes = packet.unpackPacket(buf)
-            echo("unpacker res: ", pRes)
+            if pRes == ueSuccess:
+              handlePacket(packet, anyClient)
+            else:
+              echo("unpacker res: ", pRes)
 
             # forward to client
             discard srv.sendTo(c.address, c.port, buf)

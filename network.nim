@@ -33,6 +33,8 @@ type UnpackError* = enum
   ueHuffman,
   ueOverflow,
 
+proc isConnless*(t: PacketConstruct): bool =
+  (t.flags and NET_PACKETFLAG_CONNLESS) != 0
 
 proc unpackPacket*(t: PacketConstruct, data: var string): UnpackError =
 
@@ -67,7 +69,6 @@ proc unpackPacket*(t: PacketConstruct, data: var string): UnpackError =
       var res = huffman.decompress(addr p[3], t.dataSize, addr t.data[0], sizeof(t.data))
       if res == -1:
         return ueHuffman
-      echo("[huffman] ", t.dataSize, " -> ", res)
       # new datasize
       t.dataSize = res
     else:
