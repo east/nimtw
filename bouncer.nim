@@ -12,7 +12,7 @@ type
 
   ClientSeq = seq[Client]
 
-proc getClient(clients: ClientSeq, address: string, port: Port) : Client =
+proc getClient(clients: ClientSeq, address: string, port: Port): Client =
   result = nil
 
   for c in clients:
@@ -22,7 +22,7 @@ proc getClient(clients: ClientSeq, address: string, port: Port) : Client =
 proc mainLoop(srv: Socket) =
   var buf = newStringOfCap(BufSize)
   var packet = PacketConstruct()
-  var clients : ClientSeq = @[]
+  var clients: ClientSeq = @[]
   var chunkList = newChunkList()
 
   #
@@ -30,7 +30,7 @@ proc mainLoop(srv: Socket) =
 
   var
     fromAddr = ""
-    fromPort : Port
+    fromPort: Port
     #twAddr = "95.172.92.151"
     twAddr = "127.0.0.1"
     #twPort = Port(8339)
@@ -48,7 +48,7 @@ proc mainLoop(srv: Socket) =
 
 
       if curE.key == srvKey:
-        var cl : Client
+        var cl: Client
         # packet on server socket
         var res = srv.recvFrom(buf, BufSize, fromAddr, fromPort)
         echo("[srv] received ", res, " bytes")
@@ -89,7 +89,7 @@ proc mainLoop(srv: Socket) =
 
 
 
-proc main() : int =
+proc main(): int =
   var srv = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
 
   srv.bindAddr(Port(8304), "127.0.0.1")

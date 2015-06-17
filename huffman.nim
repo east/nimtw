@@ -29,7 +29,7 @@ var
     startNode: PNode
     numNodes: int
 
-proc freqSort(list : var array[maxSymbols, PHuffmanConstructNode], length) =
+proc freqSort(list: var array[maxSymbols, PHuffmanConstructNode], length) =
     var changed = true
     while changed:
         changed = false
@@ -39,7 +39,7 @@ proc freqSort(list : var array[maxSymbols, PHuffmanConstructNode], length) =
                 changed = true
     return
 
-proc setBitsR(node : PNode, bits : uint32, depth : uint32) =
+proc setBitsR(node: PNode, bits: uint32, depth: uint32) =
     if node.leafs[1] != 0xffff:
         setBitsR(nodes[node.leafs[1]], bits or (1u32 shl depth), depth+1)
     if node.leafs[0] != 0xffff:
@@ -52,7 +52,7 @@ proc setBitsR(node : PNode, bits : uint32, depth : uint32) =
 proc constructTree(freqs: array[maxSymbols, uint32]) =
    
     # array of references for efficient sorting
-    var nodesLeft : array[maxSymbols, PHuffmanConstructNode]
+    var nodesLeft: array[maxSymbols, PHuffmanConstructNode]
 
     var numNodesLeft = maxSymbols
 
@@ -97,7 +97,7 @@ proc constructTree(freqs: array[maxSymbols, uint32]) =
 
 proc buildDecodeLUT() =
     for i in 0 .. <lutSize:
-        var bits : uint32 = uint32(i)
+        var bits: uint32 = uint32(i)
 
         var node = startNode
         var reachedEnd = true
@@ -118,21 +118,21 @@ proc buildDecodeLUT() =
             decLuts[i] = node
 
 
-proc compress*(input : ptr uint8, inLen: int, dst : ptr uint8, dstLen: int) : int =
+proc compress*(input: ptr uint8, inLen: int, dst: ptr uint8, dstLen: int): int =
 
     # buffer indices
-    var srcIndex : int = 0
-    var dstIndex : int = 0
+    var srcIndex: int = 0
+    var dstIndex: int = 0
 
     # symbol variables
-    var bits : uint32 = 0
-    var bitCount : uint32 = 0
+    var bits: uint32 = 0
+    var bitCount: uint32 = 0
 
     # make sure that we have data that we want to compress
         
     while srcIndex <= inLen:
         # load the symbol
-        var node : PNode
+        var node: PNode
         
         if srcIndex < inLen:
             node = nodes[input[srcIndex]]
@@ -168,17 +168,17 @@ proc compress*(input : ptr uint8, inLen: int, dst : ptr uint8, dstLen: int) : in
     # done
     result = dstIndex
 
-proc decompress*(input: ptr uint8, inLen: int, dst: ptr uint8, dstLen: int) : int =
+proc decompress*(input: ptr uint8, inLen: int, dst: ptr uint8, dstLen: int): int =
     
     # buffer indices
-    var srcIndex : int = 0
-    var dstIndex : int = 0
+    var srcIndex: int = 0
+    var dstIndex: int = 0
     
-    var bits : uint32 = 0
-    var bitCount : uint32 = 0
+    var bits: uint32 = 0
+    var bitCount: uint32 = 0
 
     var eof = nodes[eofSymbol]
-    var node : PNode
+    var node: PNode
 
     while true:
         node = nil
@@ -249,10 +249,10 @@ when isMainModule:
   buildDecodeLUT()
 
   var data = [5u8, 70, 61, 22, 33]
-  var dstBuf : array[1024, uint8]
-  var decBuf : array[1024, uint8]
+  var dstBuf: array[1024, uint8]
+  var decBuf: array[1024, uint8]
 
   var length = compress(addr data[0], data.len, addr dstBuf[0], dstBuf.len)
   length = decompress(addr dstBuf[0], length, addr decBuf[0], decBuf.len)
 
-  echo("done len ", length," : ", $(@decBuf))
+  echo("done len ", length,": ", $(@decBuf))

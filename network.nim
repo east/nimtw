@@ -34,7 +34,7 @@ type UnpackError* = enum
   ueOverflow,
 
 
-proc unpackPacket*(t: PacketConstruct, data: var string) : UnpackError =
+proc unpackPacket*(t: PacketConstruct, data: var string): UnpackError =
 
   result = ueSuccess
 
@@ -44,7 +44,7 @@ proc unpackPacket*(t: PacketConstruct, data: var string) : UnpackError =
     return ueOversized
 
   # parsing using c like array
-  var p : ptr uint8 = cast[ptr uint8](addr data[0])
+  var p: ptr uint8 = cast[ptr uint8](addr data[0])
 
   t.flags = (p[0] shr 4).int
   t.ack = ((p[0].int and 0xf) shl 8) or p[1].int
@@ -93,7 +93,7 @@ type
     numChunks*: int
     chunks*: seq[NetChunk]
 
-proc newChunkList*() : NetChunkList =
+proc newChunkList*(): NetChunkList =
   result.new
 
   result.numChunks = 0
@@ -103,7 +103,7 @@ proc newChunkList*() : NetChunkList =
   for i in 0 .. <MAX_CHUNKS:
     result.chunks.add(NetChunk())
 
-proc fetchChunks*(t: NetChunkList, packet: PacketConstruct, address: Address, clientId: int) : UnpackError =
+proc fetchChunks*(t: NetChunkList, packet: PacketConstruct, address: Address, clientId: int): UnpackError =
 
   result = ueSuccess
 
