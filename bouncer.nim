@@ -1,4 +1,4 @@
-import os, net, rawsockets, selectors, network, basetypes
+import os, net, rawsockets, selectors, network, msgpacker
 
 const
   BufSize = 2048
@@ -23,13 +23,37 @@ proc getClient(clients: ClientSeq, address: string, port: Port): Client =
       return c
 
 var chunkList = newChunkList()
+var unpacker = NetMsgUnpacker()
+
+
+import os
 
 proc handlePacket(packet: PacketConstruct, cl: Client) =
+  if packet.isConnless(): return # ignore connless packets
+
   var res = chunkList.fetchChunks(packet, (address: cl.address, port: cl.port), -1)
 
-  for i in 0 .. chunkList.numChunks:
+  if res != ueSuccess:
+    echo("fetchChunks error: ", res)
+    return
+
+  for i in 0 .. <chunkList.numChunks:
     var c = chunkList.chunks[i]
-    echo("chunk: ", repr c)
+
+    # init unpacker
+    unpacker.init(c.data, c.dataSize)
+    # unpack msg
+    var
+      msgId = unpacker.getInt()
+      sys = (msgId and 1) != 0
+
+    msgId = msgId shr 1
+
+    if unpacker.error:
+      echo("unpack error")
+    else:
+      echo("msg ", msgId, " sys ", sys)
+
 
 proc mainLoop(srv: Socket) =
   var buf = newStringOfCap(BufSize)
@@ -42,10 +66,10 @@ proc mainLoop(srv: Socket) =
   var
     fromAddr = ""
     fromPort: Port
-    twAddr = "95.172.92.151"
-    #twAddr = "127.0.0.1"
-    twPort = Port(8314)
-    #twPort = Port(8303)
+    #twAddr = "95.172.92.151"
+    twAddr = "127.0.0.1"
+    #twPort = Port(8314)
+    twPort = Port(8303)
 
   var sel = newSelector()
   var srvKey = sel.register(srv.getFD, {EvRead}, nil)
