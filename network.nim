@@ -122,7 +122,7 @@ proc fetchChunks*(t: NetChunkList, packet: PacketConstruct, address: Address, cl
 
     # check whether current chunk starts
     # out of buffer
-    if offs >= packet.dataSize:
+    if offs+3 >= packet.dataSize:
       return ueOverflow
 
     # unpack chunk header
