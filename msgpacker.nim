@@ -1,26 +1,26 @@
 import unsigned, ptrmath
 
 type
-  NetMsgUnpacker = ref object
-    data: ptr uint8
-    size: int
-    offs: int
-    error: bool # error state prevents
+  NetMsgUnpacker* = ref object
+    data*: ptr uint8
+    size*: int
+    offs*: int
+    error*: bool # error state prevents
                 # further unpacking
 
-  NetMsgPacker = ref object
-    data: ptr uint8
-    size: int
-    offs: int
-    error: bool # error state prevents
+  NetMsgPacker* = ref object
+    data*: ptr uint8
+    size*: int
+    offs*: int
+    error*: bool # error state prevents
                 # further unpacking
 
-proc init(t: NetMsgUnpacker|NetMsgPacker, data: ptr uint8, size: int) =
+proc init*(t: NetMsgUnpacker|NetMsgPacker, data: ptr uint8, size: int) =
   t.data = data
   t.size = size
   t.offs = 0
 
-proc addRaw(t: NetMsgPacker, data: pointer, size: int) =
+proc addRaw*(t: NetMsgPacker, data: pointer, size: int) =
   if t.error: return # ignore silently 
 
   # check for enough space
@@ -32,7 +32,7 @@ proc addRaw(t: NetMsgPacker, data: pointer, size: int) =
   copyMem(addr t.data[t.offs], data, size)
   t.offs += size
 
-proc getRaw(t: NetMsgUnpacker, dst: pointer, size: int) =
+proc getRaw*(t: NetMsgUnpacker, dst: pointer, size: int) =
   if t.error: return # ignore silently
 
   # check for enough data
@@ -44,7 +44,7 @@ proc getRaw(t: NetMsgUnpacker, dst: pointer, size: int) =
   copyMem(dst, addr t.data[t.offs], size)
   t.offs += size
 
-proc addString(t: NetMsgPacker, str: var string, limit: int=0) =
+proc addString*(t: NetMsgPacker, str: var string, limit: int=0) =
   if t.error: return # ignore silently
 
   var length = limit
@@ -67,7 +67,7 @@ proc addString(t: NetMsgPacker, str: var string, limit: int=0) =
 
   t.offs += cLength
 
-proc getString(t: NetMsgUnpacker, dst: var string) =
+proc getString*(t: NetMsgUnpacker, dst: var string) =
   if t.error: return # ignore silently
 
   # get length of cstring
@@ -95,7 +95,7 @@ proc getString(t: NetMsgUnpacker, dst: var string) =
 
   t.offs += cLength
 
-proc getInt(t: NetMsgUnpacker) : int =
+proc getInt*(t: NetMsgUnpacker) : int =
   if t.error: return 0 # ignore silently
 
   # tmp offset
@@ -135,7 +135,7 @@ proc getInt(t: NetMsgUnpacker) : int =
   else:
     t.offs = offs
 
-proc addInt(t: NetMsgPacker, val: int) =
+proc addInt*(t: NetMsgPacker, val: int) =
   if t.error: return # ignore silently
 
   # make sure that we have space enough
