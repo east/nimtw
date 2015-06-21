@@ -1,60 +1,152 @@
-const 
-  NETMSG_NULL* = 0          # the first thing sent by the client
-                            # contains the version info for the client
-  NETMSG_INFO* = 1          # sent by server
-  NETMSG_MAP_CHANGE* = 2    # sent when client should switch map
-  NETMSG_MAP_DATA* = 3      # map transfer, contains a chunk of the map file
-  NETMSG_CON_READY* = 4     # connection is ready, client should send start info
-  NETMSG_SNAP* = 5          # normal snapshot, multiple parts
-  NETMSG_SNAPEMPTY* = 6     # empty snapshot
-  NETMSG_SNAPSINGLE* = 7    # ?
-  NETMSG_SNAPSMALL* = 8     #
-  NETMSG_INPUTTIMING* = 9   # reports how off the input was
-  NETMSG_RCON_AUTH_STATUS* = 10 # result of the authentication
-  NETMSG_RCON_LINE* = 11    # line that should be printed to the remote console
-  NETMSG_AUTH_CHALLANGE* = 12 #
-  NETMSG_AUTH_RESULT* = 13  #
-                            # sent by client
-  NETMSG_READY* = 14        #
-  NETMSG_ENTERGAME* = 15
-  NETMSG_INPUT* = 16        # contains the inputdata from the client
-  NETMSG_RCON_CMD* = 17     #
-  NETMSG_RCON_AUTH* = 18    #
-  NETMSG_REQUEST_MAP_DATA* = 19 #
-  NETMSG_AUTH_START* = 20   #
-  NETMSG_AUTH_RESPONSE* = 21 #
-                             # sent by both
-  NETMSG_PING* = 22
-  NETMSG_PING_REPLY* = 23
-  NETMSG_ERROR* = 24        # sent by server (todo: move it up)
-  NETMSG_RCON_CMD_ADD* = 25
-  NETMSG_RCON_CMD_REM* = 26
-# this should be revised
-const 
-  SERVER_TICK_SPEED* = 50
-  SERVER_FLAG_PASSWORD* = 0x00000001
-  MAX_CLIENTS* = 64
-  VANILLA_MAX_CLIENTS* = 16
-  MAX_INPUT_SIZE* = 128
-  MAX_SNAPSHOT_PACKSIZE* = 900
-  MAX_NAME_LENGTH* = 16
-  MAX_CLAN_LENGTH* = 12     # message packing
-  MSGFLAG_VITAL* = 1
-  MSGFLAG_FLUSH* = 2
-  MSGFLAG_NORECORD* = 4
-  MSGFLAG_RECORD* = 8
-  MSGFLAG_NOSEND* = 16
-const 
-  VERSION_VANILLA* = 0
-  VERSION_DDRACE* = 1
-  VERSION_DDNET_OLD* = 2
-  VERSION_DDNET_WHISPER* = 217
-  VERSION_DDNET_GOODHOOK* = 221
-  VERSION_DDNET_EXTRATUNES* = 302
-  VERSION_DDNET_RCONPROTECT* = 408
-  VERSION_DDNET_ANTIPING_PROJECTILE* = 604
-  VERSION_DDNET_HOOKDURATION_TUNE* = 607
-  VERSION_DDNET_FIREDELAY_TUNE* = 701
+import netmsgtypes, netmsgdefs, msgpacker, strutils
+
+# server messages
+netmsg:
+  Invalid: discard
+
+  SvMotd:
+    msg: string
+    
+  SvBroadcast:
+    msg: string
+
+  SvChat:
+    team: Team
+    clientId: ClientId
+    msg: StringHalfStrict
+
+  SvKillMsg:
+    killer: ClientId
+    victim: ClientId
+    weapon: Weapon
+    modeSpecial: int
+
+  SvSoundGlobal:
+    soundId: Sound
+
+  SvTuneParams: discard
+  SvExtraProjectile: discard
+  SvReadyToEnter: discard
+
+  SvWeaponPickup:
+    weapon: Weapon
+
+  SvEmoticon:
+    clientId: ClientId
+    emoticon: Emoticon
+
+  SvVoteClearOptions: discard
+  
+  SvVoteOptionListAdd:
+    numOptions: range[1 .. 15]
+    description0: StringStrict
+    description1: StringStrict
+    description2: StringStrict
+    description3: StringStrict
+    description4: StringStrict
+    description5: StringStrict
+    description6: StringStrict
+    description7: StringStrict
+    description8: StringStrict
+    description9: StringStrict
+    description10: StringStrict
+    description11: StringStrict
+    description12: StringStrict
+    description13: StringStrict
+    description14: StringStrict
+
+  SvVoteOptionAdd:
+    description: StringStrict
+
+  SvVoteOptionRemove:
+    description: StringStrict
+
+  SvVoteSet:
+    timeout: range[0 .. 60]
+    description: StringStrict
+    reason: StringStrict
+
+  SvVoteStatus:
+    yes: ClientIdValid
+    no: ClientIdValid
+    pass: ClientIdValid
+    total: ClientIdValid
+
+  # client messages
+  ClSay:
+    team: bool
+    msg: StringHalfStrict
+
+  ClSetTeam:
+    team: Team
+
+  ClSetSpectatorMode:
+    spectatorId: SpectatorId
+
+  ClStartInfo:
+    name: StringStrict
+    clan: StringStrict
+    country: int
+    skin: StringStrict
+    useCustomColor: bool
+    colorBody: int
+    colorFeet: int
+
+  ClChangeInfo:
+    name: StringStrict
+    clan: StringStrict
+    country: int
+    skin: StringStrict
+    useCustomColor: bool
+    colorBody: int
+    colorFeet: int
+
+  ClKill: discard
+
+  ClEmoticon:
+    emoticon: Emoticon
+
+  ClVote:
+    vote: range[-1 .. 1]
+
+  ClCallVote:
+    typeStr: StringStrict
+    value: StringStrict
+    reason: StringStrict
+
+  ClIsDDNet: discard
+
+  SvDDRaceTime:
+    time: int
+    check: int
+    finish: range[0 .. 1]
+
+  SvRecord:
+    serverTimeBest: int
+    playerTimeBest: int
+
+  SvPlayerTime:
+    time: int
+    clientId: ClientId
+
+  SvTeamsState: discard
+
+  ClShowOthers:
+    show: bool
+
+
+when isMainModule:
+  var t = SvPlayerTime()
+
+  t.time = 5
+  t.clientId = 15
+
+
+  var msg : NetMsg = t
+
+  var t2 = SvPlayerTime(msg)
+
+  echo("msg: ", t2[])
 
 
 
