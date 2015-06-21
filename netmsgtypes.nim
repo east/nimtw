@@ -79,12 +79,17 @@ macro netmsg*(body: stmt): stmt {.immediate.} =
     var recList = newNimNode(nnkRecList)
     typeDef[0][0][2][0][2] = recList
 
-    # build ident defs
+    # build identdefs
     for v in 0 .. msg.vars.len-1:
       #recList.insert(0, msg.vars[v].identDefs)
       var identDef = newNimNode(nnkIdentDefs)
 
-      identDef.insert(0, msg.vars[v].n)
+      # add export marker
+      var postFix = newNimNode(nnkPostFix)
+      postFix.insert(0, ident("*"))
+      postFix.insert(1, msg.vars[v].n)
+
+      identDef.insert(0, postFix)
       identDef.insert(1, msg.vars[v].t)
       identDef.insert(2, newEmptyNode())
 
