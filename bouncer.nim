@@ -1,4 +1,4 @@
-import os, net, rawsockets, selectors, network, msgpacker
+import os, net, rawsockets, selectors, network, msgpacker, netmsg
 
 const
   BufSize = 2048
@@ -28,6 +28,26 @@ var unpacker = NetMsgUnpacker()
 
 import os
 
+proc handleGameMsg(msgType: NetMsgType) =
+  if msgType == NetMsgType.ClSay:
+    # unpack ClSay
+    var msg = ClSay()
+
+    if msg.unpack(unpacker):
+      echo("ClSay: ", msg[])
+    else:
+      echo("failed to unpack")
+
+  elif msgType == NetMsgType.SvChat:
+    # unpack SvChat
+    var msg = SvChat()
+
+    if msg.unpack(unpacker):
+      echo("ClChat: ", msg[])
+    else:
+      echo("failed to unpack")
+
+
 proc handlePacket(packet: PacketConstruct, cl: Client) =
   if packet.isConnless(): return # ignore connless packets
 
@@ -49,10 +69,16 @@ proc handlePacket(packet: PacketConstruct, cl: Client) =
 
     msgId = msgId shr 1
 
+    # ignore sys msgs for now
+    if sys: continue
+
     if unpacker.error:
       echo("unpack error")
-    else:
-      echo("msg ", msgId, " sys ", sys)
+    #else:
+    #  echo("msg ", msgId, " : ", NetMsgType(msgId))
+
+    var netMsgType = NetMsgType(msgId)
+    handleGameMsg(netMsgType)
 
 
 proc mainLoop(srv: Socket) =
@@ -75,7 +101,7 @@ proc mainLoop(srv: Socket) =
   var srvKey = sel.register(srv.getFD, {EvRead}, nil)
 
   while true:
-   
+
     var fdseq = sel.select(-1)
 
     while fdseq.len > 0:
@@ -87,7 +113,7 @@ proc mainLoop(srv: Socket) =
         # packet on server socket
         var res = srv.recvFrom(buf, BufSize, fromAddr, fromPort)
         #echo("[srv] received ", res, " bytes")
-       
+
         cl = clients.getClient(fromAddr, fromPort)
         if cl == nil:
           echo("add new client: ", fromAddr, ":", fromPort)
