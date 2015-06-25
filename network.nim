@@ -69,6 +69,7 @@ proc unpackPacket*(t: PacketConstruct, data: var string): UnpackError =
       var res = huffman.decompress(addr p[3], t.dataSize, addr t.data[0], sizeof(t.data))
       if res == -1:
         return ueHuffman
+
       # new datasize
       t.dataSize = res
     else:

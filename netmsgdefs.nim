@@ -134,3 +134,9 @@ type
     Rifle,
     Ninja,
 
+  NetCtrlMsg* {.pure.} = enum
+    KeepAlive
+    Connect
+    ConnectAccept
+    Accept
+    Close

@@ -1,4 +1,4 @@
-import os, net, rawsockets, selectors, network, msgpacker, netmsg
+import os, net, rawsockets, selectors, network, msgpacker, netmsg, netmsgdefs
 
 const
   BufSize = 2048
@@ -51,6 +51,17 @@ proc handleGameMsg(msgType: NetMsgType) =
 proc handlePacket(packet: PacketConstruct, cl: Client) =
   if packet.isConnless(): return # ignore connless packets
 
+  # msg from client
+  var prefix = " -> "
+  
+  if cl == anyClient:
+    # msg from server
+    prefix = " <- "
+
+  if packet.numChunks == 0:
+    var ctrl = NetCtrlMsg(packet.data[0])
+    echo(prefix, "ctr msg: ", ctrl)
+
   var res = chunkList.fetchChunks(packet, (address: cl.address, port: cl.port), -1)
 
   if res != ueSuccess:
@@ -69,16 +80,19 @@ proc handlePacket(packet: PacketConstruct, cl: Client) =
 
     msgId = msgId shr 1
 
-    # ignore sys msgs for now
-    if sys: continue
 
     if unpacker.error:
       echo("unpack error")
-    #else:
-    #  echo("msg ", msgId, " : ", NetMsgType(msgId))
+    else:
 
-    var netMsgType = NetMsgType(msgId)
-    handleGameMsg(netMsgType)
+    #  echo("msg ", msgId, " : ", NetMsgType(msgId))
+      if sys:
+        echo(prefix, "sys msg: ", NetSysMsg(msgId))
+      else:
+        echo(prefix, "gam msg: ", NetMsgType(msgId))
+
+    #var netMsgType = NetMsgType(msgId)
+    #handleGameMsg(netMsgType)
 
 
 proc mainLoop(srv: Socket) =

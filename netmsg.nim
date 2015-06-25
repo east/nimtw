@@ -1,5 +1,48 @@
 import netmsgtypes, netmsgdefs, msgpacker, strutils
 
+# sys messages
+type NetSysMsg* {.pure.} = enum
+  Null,
+
+  # sent by client
+  Info,
+  
+  # sent by server
+  MapChange,
+  MapData,
+  ConReady,
+  Snap,
+  SnapEmpty,
+  SnapSingle,
+  SnapSmall,
+  InputTiming,
+  RconAuthStatus,
+  RconLine,
+
+  AuthChallenge,
+  AuthResult,
+
+  # sent by client
+  Ready,
+  EnterGame,
+  Input,
+  RconCmd,
+  RconAuth,
+  RequestMapData,
+  
+  AuthStart,
+  AuthResponse,
+
+  # sent by both
+  Ping,
+  PingReply,
+  Error,
+
+  # sent by server
+  RconCmdAdd,
+  RconCmdRem
+
+# game messages
 # server messages
 netmsg:
   Invalid: discard
