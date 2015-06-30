@@ -36,7 +36,7 @@ proc getRaw*(t: NetMsgUnpacker, dst: pointer, size: int) =
   if t.error: return # ignore silently
 
   # check for enough data
-  if t.size < size:
+  if t.size-t.offs < size:
     t.error = true
     return
 
