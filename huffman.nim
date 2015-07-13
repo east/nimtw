@@ -62,7 +62,7 @@ proc constructTree(freqs: array[maxSymbols, uint32]) =
 
     # add the symbols
     for i in 0 .. <maxSymbols:
-        nodes[i].numBits = 0xffffffff
+        nodes[i].numBits = 0xffffffff'u32
         nodes[i].symbol = i and 0xff
         nodes[i].leafs[0] = 0xffff
         nodes[i].leafs[1] = 0xffff
