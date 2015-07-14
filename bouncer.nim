@@ -1,4 +1,4 @@
-import os, net, rawsockets, selectors, network, msgpacker, netmsg, netmsgdefs
+import os, net, rawsockets, selectors, network, msgpacker, netmsg, netmsgdefs, strutils
 
 const
   BufSize = 2048
@@ -13,7 +13,7 @@ type
   ClientSeq = seq[Client]
 
 let
-  anyClient = Client(socket: nil, address: "0.0.0.0", port: Port(0), sel: nil)
+  anyClient = Client(socket: nil, address: "0.0.0.0", port: Port(0))
 
 proc getClient(clients: ClientSeq, address: string, port: Port): Client =
   result = nil
@@ -88,6 +88,22 @@ proc handlePacket(packet: PacketConstruct, cl: Client) =
     #  echo("msg ", msgId, " : ", NetMsgType(msgId))
       if sys:
         echo(prefix, "sys msg: ", NetSysMsg(msgId))
+
+        case msgId.NetSysMsg:
+        of NetSysMsg.Info:
+
+          var
+            version = ""
+            password = ""
+          
+
+          unpacker.getString(version)
+          unpacker.getString(password)
+
+          echo("client version: '$1' pw '$2'".format(version, password))
+        else:
+          discard
+
       else:
         echo(prefix, "gam msg: ", NetMsgType(msgId))
 
@@ -112,7 +128,8 @@ proc mainLoop(srv: Socket) =
     twPort = Port(8303)
 
   var sel = newSelector()
-  var srvKey = sel.register(srv.getFD, {EvRead}, nil)
+  sel.register(srv.getFD, {EvRead}, nil)
+  var srvKey = sel[srv.getFD]
 
   while true:
 
@@ -135,10 +152,11 @@ proc mainLoop(srv: Socket) =
           var s = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
 
           # register fd in selector
-          var sel = sel.register(s.getFD, {EvRead}, nil)
+          sel.register(s.getFD, {EvRead}, nil)
+          var selKey = sel[s.getFd]
 
           # add client to list
-          cl = Client(socket:s, address:fromAddr, port:fromPort, sel: sel)
+          cl = Client(socket:s, address:fromAddr, port:fromPort, sel: selKey)
           clients.add(cl)
 
         var pRes = packet.unpackPacket(buf)
