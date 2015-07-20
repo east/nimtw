@@ -105,7 +105,7 @@ proc newChunkList*(): NetChunkList =
   for i in 0 .. <MAX_CHUNKS:
     result.chunks.add(NetChunk())
 
-proc fetchChunks*(t: NetChunkList, packet: PacketConstruct, address: Address, clientId: int): UnpackError =
+proc fetchChunks*(t: NetChunkList, packet: PacketConstruct, address: Address, clientId: int, extraData: var string): UnpackError =
 
   result = ueSuccess
 
@@ -156,3 +156,24 @@ proc fetchChunks*(t: NetChunkList, packet: PacketConstruct, address: Address, cl
 
     # step over chunk data
     offs += size
+
+
+  # fetch extra data
+  var vanillaSize = 0
+
+  if packet.numChunks == 0:
+    # should be ctrl msg
+    vanillaSize = 1
+  else:
+    # ends behind boundaries of last chunk
+    vanillaSize = offs
+
+  var extraDataLen = packet.dataSize - vanillaSize
+  # copy extradata
+  extraData.setLen(extraDataLen)
+  copyMem(addr extraData[0], addr p[vanillaSize], extraDataLen)
+
+proc fetchChunks*(t: NetChunkList, packet: PacketConstruct, address: Address, clientId: int): UnpackError =
+  var extraData = ""
+  fetchChunks(t, packet, address, clientId, extraData)
+

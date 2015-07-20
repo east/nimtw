@@ -47,6 +47,40 @@ proc handleGameMsg(msgType: NetMsgType) =
     else:
       echo("failed to unpack")
 
+proc seqTokenInfo(packet: PacketConstruct, extra: string): string =
+  if extra.len == 0:
+    return "no seq token"
+
+  var
+    isCtrl = packet.numChunks == 0
+    seqOffs = 0
+    validSize = false
+
+  # ctrl
+  if isCtrl:
+    var ctrl = NetCtrlMsg(packet.data[0])
+    if (ctrl == NetCtrlMsg.ConnectAccept or
+        ctrl == NetCtrlMsg.Connect) and extra.len == 8:
+      seqOffs = 4
+      validSize = true
+    elif extra.len == 4:
+      validSize = true
+  # chunks
+  elif extra.len == 4:
+    validSize = true
+
+  if not validSize:
+    return "invalid extra size $1".format(extra.len)
+
+
+  # parse seq token
+  var info = newStringOfCap(32)
+  info &= "seq token: "
+
+  for i in 0 .. 3:
+    info &= BiggestInt(extra[i+seqOffs].int).toHex(2)
+  
+  return info
 
 proc handlePacket(packet: PacketConstruct, cl: Client) =
   if packet.isConnless(): return # ignore connless packets
@@ -58,15 +92,20 @@ proc handlePacket(packet: PacketConstruct, cl: Client) =
     # msg from server
     prefix = " <- "
 
-  if packet.numChunks == 0:
-    var ctrl = NetCtrlMsg(packet.data[0])
-    echo(prefix, "ctr msg: ", ctrl)
+  var
+    extra = newString(4)
 
-  var res = chunkList.fetchChunks(packet, (address: cl.address, port: cl.port), -1)
+  var res = chunkList.fetchChunks(packet, (address: cl.address, port: cl.port), -1, extra)
 
   if res != ueSuccess:
     echo("fetchChunks error: ", res)
     return
+
+  var addInfo = " : " & seqTokenInfo(packet, extra)
+
+  if packet.numChunks == 0:
+    var ctrl = NetCtrlMsg(packet.data[0])
+    echo(prefix, "ctr msg: ", ctrl, addInfo)
 
   for i in 0 .. <chunkList.numChunks:
     var c = chunkList.chunks[i]
@@ -87,7 +126,7 @@ proc handlePacket(packet: PacketConstruct, cl: Client) =
 
     #  echo("msg ", msgId, " : ", NetMsgType(msgId))
       if sys:
-        echo(prefix, "sys msg: ", NetSysMsg(msgId))
+        echo(prefix, "sys msg: ", NetSysMsg(msgId), addInfo)
 
         case msgId.NetSysMsg:
         of NetSysMsg.Info:
@@ -105,7 +144,7 @@ proc handlePacket(packet: PacketConstruct, cl: Client) =
           discard
 
       else:
-        echo(prefix, "gam msg: ", NetMsgType(msgId))
+        echo(prefix, "gam msg: ", NetMsgType(msgId), addInfo)
 
     #var netMsgType = NetMsgType(msgId)
     #handleGameMsg(netMsgType)
