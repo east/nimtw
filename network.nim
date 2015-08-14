@@ -1,7 +1,8 @@
 # network unpackers / parser
 # (contains unsafe operations e.g. pointer arithmetics)
 
-import ptrmath, unsigned, twnetheaders
+import strutils
+import ptrmath, unsigned, twnetheaders, msgpacker, netmsg
 
 from rawsockets import Port
 
@@ -33,8 +34,32 @@ type UnpackError* = enum
   ueHuffman,
   ueOverflow,
 
+proc flagsInfo*(t: PacketConstruct): string =
+  var parts: seq[string] = @[]
+
+  if (t.flags and NET_PACKETFLAG_CONTROL) != 0:
+    parts.add("ctrl")
+  
+  if (t.flags and NET_PACKETFLAG_CONNLESS) != 0:
+    parts.add("connless")
+  
+  if (t.flags and NET_PACKETFLAG_RESEND) != 0:
+    parts.add("resend")
+
+  if (t.flags and NET_PACKETFLAG_COMPRESSION) != 0:
+    parts.add("compress")
+
+  if parts.len > 0:
+    result = parts.join("|")
+  else:
+    result = "<none>"
+
+
 proc isConnless*(t: PacketConstruct): bool =
   (t.flags and NET_PACKETFLAG_CONNLESS) != 0
+
+proc isCtrl*(t: PacketConstruct): bool =
+  (t.flags and NET_PACKETFLAG_CONTROL) != 0
 
 proc unpackPacket*(t: PacketConstruct, data: var string): UnpackError =
 
@@ -90,10 +115,62 @@ type
     flags*: int
     dataSize*: int
     data*: ptr uint8
+    sequence*: int
 
   NetChunkList* = ref object
     numChunks*: int
     chunks*: seq[NetChunk]
+
+proc isVital*(t: NetChunk): bool =
+  (t.flags and NET_CHUNKFLAG_VITAL) != 0
+
+proc seqInfo*(t: NetChunk): string =
+  if t.isVital:
+    $t.sequence
+  else:
+    "-"
+
+proc flagsInfo*(t: NetChunk): string =
+  var parts: seq[string] = @[]
+
+  if (t.flags and NET_CHUNKFLAG_VITAL) != 0:
+    parts.add("vital")
+  
+  if (t.flags and NET_PACKETFLAG_RESEND) != 0:
+    parts.add("resend")
+  
+  if parts.len > 0:
+    result = parts.join("|")
+  else:
+    result = "<none>"
+
+
+
+var unpacker = NetMsgUnpacker()
+proc chunkInfo*(c: NetChunk): string =
+  # init unpacker
+  unpacker.init(c.data, c.dataSize)
+  # unpack msg
+  var
+    msgId = unpacker.getInt()
+    sys = (msgId and 1) != 0
+
+  msgId = msgId shr 1
+
+  var infoParts: seq[string] = @[]
+
+  if sys:
+    infoParts.add("sys msg: " & $NetSysMsg(msgId))
+  else:
+    infoParts.add("gam msg: " & $NetSysMsg(msgId))
+
+  if c.isVital:
+    infoParts.add("seq: " & c.seqInfo)
+
+  if c.flags != 0:
+    infoParts.add("flags: " & c.flagsInfo)
+
+  result = infoParts.join(" ")
 
 proc newChunkList*(): NetChunkList =
   result.new
@@ -153,25 +230,29 @@ proc fetchChunks*(t: NetChunkList, packet: PacketConstruct, address: Address, cl
     chunk.flags = flags
     chunk.dataSize = size
     chunk.data = addr p[offs]
+    chunk.sequence = sequence
 
     # step over chunk data
     offs += size
 
 
   # fetch extra data
-  var vanillaSize = 0
+  # var vanillaSize = 0
 
-  if packet.numChunks == 0:
-    # should be ctrl msg
-    vanillaSize = 1
-  else:
-    # ends behind boundaries of last chunk
-    vanillaSize = offs
+  # if packet.numChunks == 0:
+  #   # should be ctrl msg
+  #   vanillaSize = 1
+  # else:
+  #   # ends behind boundaries of last chunk
+  #   vanillaSize = offs
 
-  var extraDataLen = packet.dataSize - vanillaSize
-  # copy extradata
-  extraData.setLen(extraDataLen)
-  copyMem(addr extraData[0], addr p[vanillaSize], extraDataLen)
+  # var extraDataLen = packet.dataSize - vanillaSize
+  # # copy extradata
+  # extraData.setLen(extraDataLen)
+  # copyMem(addr extraData[0], addr p[vanillaSize], extraDataLen)
+  
+  #TODO:
+  extraData.setLen(0)
 
 proc fetchChunks*(t: NetChunkList, packet: PacketConstruct, address: Address, clientId: int): UnpackError =
   var extraData = ""

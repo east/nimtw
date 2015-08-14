@@ -52,12 +52,13 @@ proc seqTokenInfo(packet: PacketConstruct, extra: string): string =
     return "no seq token"
 
   var
-    isCtrl = packet.numChunks == 0
     seqOffs = 0
     validSize = false
 
   # ctrl
-  if isCtrl:
+  if packet.isCtrl:
+    if packet.data[0].int notin 0 .. 4:
+      return "oops"
     var ctrl = NetCtrlMsg(packet.data[0])
     if (ctrl == NetCtrlMsg.ConnectAccept or
         ctrl == NetCtrlMsg.Connect) and extra.len == 8:
@@ -101,11 +102,17 @@ proc handlePacket(packet: PacketConstruct, cl: Client) =
     echo("fetchChunks error: ", res)
     return
 
-  var addInfo = " : " & seqTokenInfo(packet, extra)
+  #var addInfo = " : " & seqTokenInfo(packet, extra)
 
-  if packet.numChunks == 0:
-    var ctrl = NetCtrlMsg(packet.data[0])
-    echo(prefix, "ctr msg: ", ctrl, addInfo)
+  echo(prefix, "packet ack ", packet.ack, " flags: ", packet.flagsInfo)
+
+  if packet.isCtrl:
+    try:
+      var ctrl = $NetCtrlMsg(packet.data[0])
+      #echo(prefix, "ctr msg: ", ctrl, addInfo)
+      echo(prefix, "  ctrl msg: ", ctrl)
+    except:
+      echo(prefix, "  ctrl msg: invalid : ", packet.data[0].int)
 
   for i in 0 .. <chunkList.numChunks:
     var c = chunkList.chunks[i]
@@ -124,27 +131,31 @@ proc handlePacket(packet: PacketConstruct, cl: Client) =
       echo("unpack error")
     else:
 
+      echo(prefix, "  ", c.chunkInfo)
+
     #  echo("msg ", msgId, " : ", NetMsgType(msgId))
-      if sys:
-        echo(prefix, "sys msg: ", NetSysMsg(msgId), addInfo)
+      # if sys:
+      #   #echo(prefix, " sys msg: ", NetSysMsg(msgId), " seq: ", c.sequence, " f: ", c.flags, addInfo)
+      #   echo(prefix, " sys msg: ", NetSysMsg(msgId), " seq: ", c.sequence, " f: ", c.flagsInfo)
 
-        case msgId.NetSysMsg:
-        of NetSysMsg.Info:
+      #   case msgId.NetSysMsg:
+      #   of NetSysMsg.Info:
 
-          var
-            version = ""
-            password = ""
-          
+      #     var
+      #       version = ""
+      #       password = ""
+      #     
 
-          unpacker.getString(version)
-          unpacker.getString(password)
+      #     unpacker.getString(version)
+      #     unpacker.getString(password)
 
-          echo("client version: '$1' pw '$2'".format(version, password))
-        else:
-          discard
+      #     echo("client version: '$1' pw '$2'".format(version, password))
+      #   else:
+      #     discard
 
-      else:
-        echo(prefix, "gam msg: ", NetMsgType(msgId), addInfo)
+      # else:
+      #   #echo(prefix, " gam msg: ", NetMsgType(msgId), addInfo)
+      #   echo(prefix, " gam msg: ", NetMsgType(msgId), " seq: ", c.sequence, " f: ", c.flagsInfo)
 
     #var netMsgType = NetMsgType(msgId)
     #handleGameMsg(netMsgType)
@@ -230,7 +241,7 @@ proc mainLoop(srv: Socket) =
 proc main(): int =
   var srv = newSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
 
-  srv.bindAddr(Port(8304), "127.0.0.1")
+  srv.bindAddr(Port(8304), "0.0.0.0")
 
   mainLoop(srv)
 
