@@ -104,7 +104,7 @@ proc handlePacket(packet: PacketConstruct, cl: Client) =
 
   #var addInfo = " : " & seqTokenInfo(packet, extra)
 
-  echo(prefix, "packet ack ", packet.ack, " flags: ", packet.flagsInfo)
+  echo(prefix, "packet ", packet.packetInfo)
 
   if packet.isCtrl:
     try:

@@ -17,6 +17,7 @@ type
     ack*: int
     numChunks*: int
     dataSize*: int
+    origDataSize*: int
     data*: array[NET_MAX_PAYLOAD, uint8]
 
   PacketConstruct* = ref PacketConstructObj
@@ -61,6 +62,22 @@ proc isConnless*(t: PacketConstruct): bool =
 proc isCtrl*(t: PacketConstruct): bool =
   (t.flags and NET_PACKETFLAG_CONTROL) != 0
 
+proc packetInfo*(p: PacketConstruct): string =
+
+  var infoParts: seq[string] = @[]
+
+  infoParts.add("ack: " & $p.ack)
+
+  if p.flags != 0:
+    infoParts.add("flags: " & p.flagsInfo)
+
+  if (p.flags and NET_PACKETFLAG_COMPRESSION) != 0:
+    infoParts.add("size: $1->$2".format(p.dataSize, p.origDataSize))
+  else:
+    infoParts.add("size: $1".format(p.dataSize))
+
+  result = infoParts.join(" ")
+
 proc unpackPacket*(t: PacketConstruct, data: var string): UnpackError =
 
   result = ueSuccess
@@ -76,7 +93,8 @@ proc unpackPacket*(t: PacketConstruct, data: var string): UnpackError =
   t.flags = (p[0] shr 4).int
   t.ack = ((p[0].int and 0xf) shl 8) or p[1].int
   t.numChunks = p[2].int;
-  t.dataSize = data.len - NET_PACKETHEADERSIZE
+  t.origDataSize = data.len - NET_PACKETHEADERSIZE
+  t.dataSize = t.origDataSize
 
   if (t.flags and NET_PACKETFLAG_CONNLESS) != 0:
     # packet is connless
